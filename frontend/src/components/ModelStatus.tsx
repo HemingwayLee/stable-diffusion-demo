@@ -1,14 +1,16 @@
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import MemoryIcon from '@mui/icons-material/Memory';
-import { Box, Chip, CircularProgress, Tooltip, Typography } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { getModelStatus } from '../api/status';
+import { Box, Button, CircularProgress, Tooltip, Typography } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getModelStatus, loadModel } from '../api/status';
 import { ModelStatus as ModelStatusType } from '../types';
 
 const shortModelName = (id: string) => id.split('/').pop() ?? id;
 
 export default function ModelStatus() {
+  const queryClient = useQueryClient();
+
   const { data } = useQuery<ModelStatusType>({
     queryKey: ['model-status'],
     queryFn: getModelStatus,
@@ -19,9 +21,29 @@ export default function ModelStatus() {
     retry: false,
   });
 
+  const { mutate: triggerLoad, isPending } = useMutation({
+    mutationFn: loadModel,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['model-status'] }),
+  });
+
   if (!data) return null;
 
   const { status, model_id, device, error } = data;
+
+  if (status === 'not_started') {
+    return (
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={isPending ? <CircularProgress size={12} thickness={5} /> : <MemoryIcon />}
+        onClick={() => triggerLoad()}
+        disabled={isPending}
+        sx={{ textTransform: 'none' }}
+      >
+        Load Model
+      </Button>
+    );
+  }
 
   const icon =
     status === 'ready' ? (
@@ -37,9 +59,7 @@ export default function ModelStatus() {
       ? `${shortModelName(model_id)} · ${device}`
       : status === 'loading'
         ? 'Loading model…'
-        : status === 'error'
-          ? 'Model error'
-          : 'Initialising…';
+        : 'Model error';
 
   return (
     <Tooltip
@@ -48,7 +68,7 @@ export default function ModelStatus() {
           <Typography variant="caption">{error}</Typography>
         ) : status === 'loading' ? (
           <Typography variant="caption">
-            Downloading and loading {shortModelName(model_id)} — this can take a few minutes on first run.
+            Loading {shortModelName(model_id)} — this can take a few minutes on first run.
           </Typography>
         ) : (
           <Typography variant="caption">{model_id}</Typography>

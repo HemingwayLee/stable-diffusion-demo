@@ -3,6 +3,9 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import diffusers.utils.logging as diffusers_logging
+diffusers_logging.set_verbosity_info()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -27,14 +30,23 @@ async def _load_model_with_logging():
         logger.error("Model failed to load: %s", exc)
 
 
+async def _migrate(conn) -> None:
+    """Add columns introduced after initial table creation."""
+    migrations = [
+        "ALTER TABLE generations ADD COLUMN IF NOT EXISTS generation_type VARCHAR(10) NOT NULL DEFAULT 'txt2img'",
+        "ALTER TABLE generations ADD COLUMN IF NOT EXISTS strength FLOAT",
+        "ALTER TABLE generations ADD COLUMN IF NOT EXISTS input_image_filename VARCHAR(255)",
+    ]
+    from sqlalchemy import text
+    for sql in migrations:
+        await conn.execute(text(sql))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-    # Load the SD model in the background so the API is immediately reachable.
-    # Requests will receive 503 until the model finishes loading.
-    asyncio.create_task(_load_model_with_logging())
+        await _migrate(conn)
 
     yield
     await engine.dispose()

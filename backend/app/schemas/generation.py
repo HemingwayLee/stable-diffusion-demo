@@ -24,8 +24,11 @@ class GenerationResponse(BaseModel):
     steps: int
     seed: Optional[int]
     actual_seed: Optional[int]
+    generation_type: str
+    strength: Optional[float]
     status: str
     image_url: Optional[str] = None
+    input_image_url: Optional[str] = None
     error_message: Optional[str]
     created_at: datetime
     completed_at: Optional[datetime]

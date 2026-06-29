@@ -225,5 +225,12 @@ frontend/.env.local
 # Generated images (runtime data)
 backend/images/
 
+# Downloaded model weights
+models/
+
+# Local volume data
+images/
+postgres/
+
 # Project env file
 .env

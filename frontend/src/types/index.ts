@@ -1,4 +1,5 @@
 export type GenerationStatus = 'pending' | 'generating' | 'completed' | 'failed';
+export type GenerationType = 'txt2img' | 'img2img';
 
 export type AspectRatio =
   | '1:1'
@@ -21,8 +22,11 @@ export interface Generation {
   steps: number;
   seed: number | null;
   actual_seed: number | null;
+  generation_type: GenerationType;
+  strength: number | null;
   status: GenerationStatus;
   image_url: string | null;
+  input_image_url: string | null;
   error_message: string | null;
   created_at: string;
   completed_at: string | null;
@@ -38,10 +42,26 @@ export interface GenerationCreate {
   seed?: number;
 }
 
+export interface Img2ImgCreate {
+  image: File;
+  prompt: string;
+  negative_prompt?: string;
+  strength: number;
+  cfg_scale: number;
+  steps: number;
+  seed?: number;
+}
+
+export interface ModelLoadProgress {
+  loaded_components: number;
+  total_components: number;
+}
+
 export interface ModelStatus {
   model_id: string;
   status: 'not_started' | 'loading' | 'ready' | 'error';
   device: string;
   error: string | null;
   is_turbo: boolean;
+  progress: ModelLoadProgress | null;
 }
